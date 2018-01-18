@@ -8,6 +8,7 @@ import (
   "net/url"
   "encoding/json"
   "sync"
+  "log"
   "io"
 )
 
@@ -22,49 +23,47 @@ func main()  {
   var wg sync.WaitGroup
 
   for _, filename := range(os.Args[1:]) {
-    sourceBytes, err := ioutil.ReadFile(filename)
-    if err != nil {
-      panic(err);
-    }
     wg.Add(1)
     fmt.Printf("%s --> %s.png\n", filename, filename)
-    go sequence(string(sourceBytes), fmt.Sprintf("%s.png", filename), &wg)
+    go sequence(filename, fmt.Sprintf("%s.png", filename), &wg)
   }
 
   wg.Wait()
 }
 
-func sequence(source string, destination string, wg *sync.WaitGroup) (err error){
+func sequence(source string, destination string, wg *sync.WaitGroup){
   var jsonResponse = Response{}
-
   defer wg.Done()
 
-  res, err := http.PostForm(fmt.Sprintf("%s/index.php", baseUrl), url.Values{"style": {"default"}, "message": {source}, "apiVersion": {"1"}, "format": {"png"}})
+  sourceBytes, err := ioutil.ReadFile(source)
   if err != nil {
-    return err;
+    log.Fatal(err)
+  }
+
+  res, err := http.PostForm(fmt.Sprintf("%s/index.php", baseUrl), url.Values{"style": {"default"}, "message": {string(sourceBytes)}, "apiVersion": {"1"}, "format": {"png"}})
+  if err != nil {
+    log.Fatal(err)
   }
 
   err = json.NewDecoder(res.Body).Decode(&jsonResponse)
   if err != nil {
-    return err;
+    log.Fatal(err)
   }
 
   res, err = http.Get(fmt.Sprintf("%s/%s", baseUrl, jsonResponse.ImageUrl))
   if err != nil {
-    return err;
+    log.Fatal(err)
   }
 
   defer res.Body.Close()
   file, err := os.Create(destination)
   if err != nil {
-      return err
+    log.Fatal(err)
   }
 
   _, err = io.Copy(file, res.Body)
   if err != nil {
-      return err
+    log.Fatal(err)
   }
   file.Close()
-
-  return nil
 }
