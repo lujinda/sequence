@@ -50,6 +50,12 @@ func sequence(source string, destination string, wg *sync.WaitGroup){
     log.Fatal(err)
   }
 
+  if(len(jsonResponse.Errors) > 0) {
+    for _, msg := range(jsonResponse.Errors) {
+      log.Fatal(msg)
+    }
+  }
+
   res, err = http.Get(fmt.Sprintf("%s/%s", baseUrl, jsonResponse.ImageUrl))
   if err != nil {
     log.Fatal(err)
